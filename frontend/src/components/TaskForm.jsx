@@ -13,20 +13,24 @@ const TaskForm = ({ onAdd }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 flex gap-2">
+    <form onSubmit={handleSubmit} className="flex gap-3">
       <input
+        id="new-task-input"
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Add a new task..."
-        className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow duration-200 shadow-sm text-gray-700 text-lg"
+        placeholder="Add a new task and press Enter..."
+        className="input-field flex-1"
+        autoComplete="off"
       />
       <button
+        id="add-task-btn"
         type="submit"
         disabled={!title.trim()}
-        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center transition-colors duration-200 shadow-md"
+        className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
       >
-        <Plus size={20} className="mr-1" /> Add
+        <Plus size={18} strokeWidth={2.5} />
+        Add Task
       </button>
     </form>
   );
