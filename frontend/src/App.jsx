@@ -1,301 +1,323 @@
 import React, { useState, useEffect } from 'react';
-import { getTasks, createTask, updateTask, deleteTask } from './api';
-import TaskItem from './components/TaskItem';
-import TaskForm from './components/TaskForm';
 import {
-  LayoutDashboard, CheckCheck, Clock, ListTodo,
-  Inbox, AlertCircle, Loader2, ClipboardList, Settings, User
+  CheckCheck, Clock, ListTodo, ClipboardList, LayoutDashboard,
+  Inbox, Settings, User, AlertCircle, Loader2, Sparkles
 } from 'lucide-react';
+import { getTasks, createTask, updateTask, deleteTask } from './api';
+import TaskForm   from './components/TaskForm';
+import TaskItem   from './components/TaskItem';
 
 const FILTERS = ['All', 'Active', 'Completed'];
 
-function App() {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function App() {
+  const [tasks,        setTasks]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  useEffect(() => { fetchTasks(); }, []);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const res = await getTasks();
-      setTasks(res.data);
+      const { data } = await getTasks();
+      setTasks(data);
       setError(null);
-    } catch (err) {
-      setError('Unable to connect. Make sure the backend is running on port 5000.');
+    } catch {
+      setError('Cannot reach the server — make sure the backend is running on port 5000.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddTask = async (taskData) => {
+  const handleAdd = async (taskData) => {
     try {
-      const res = await createTask(taskData);
-      setTasks([res.data, ...tasks]);
-    } catch {
-      setError('Failed to add task. Please try again.');
-    }
+      const { data } = await createTask(taskData);
+      setTasks(prev => [data, ...prev]);
+    } catch { setError('Failed to add task.'); }
   };
 
-  const handleToggleTask = async (id, completed) => {
+  const handleToggle = async (id, completed) => {
     setTasks(prev => prev.map(t => t._id === id ? { ...t, completed } : t));
-    try {
-      await updateTask(id, { completed });
-    } catch {
-      fetchTasks();
-      setError('Failed to update task.');
-    }
+    try { await updateTask(id, { completed }); }
+    catch { fetchTasks(); setError('Failed to update task.'); }
   };
 
-  const handleEditTask = async (id, title) => {
+  const handleEdit = async (id, title) => {
     setTasks(prev => prev.map(t => t._id === id ? { ...t, title } : t));
-    try {
-      await updateTask(id, { title });
-    } catch {
-      fetchTasks();
-      setError('Failed to edit task.');
-    }
+    try { await updateTask(id, { title }); }
+    catch { fetchTasks(); setError('Failed to edit task.'); }
   };
 
-  const handleDeleteTask = async (id) => {
+  const handleDelete = async (id) => {
     setTasks(prev => prev.filter(t => t._id !== id));
-    try {
-      await deleteTask(id);
-    } catch {
-      fetchTasks();
-      setError('Failed to delete task.');
-    }
+    try { await deleteTask(id); }
+    catch { fetchTasks(); setError('Failed to delete task.'); }
   };
 
-  const total = tasks.length;
-  const completed = tasks.filter(t => t.completed).length;
-  const active = total - completed;
-  const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+  const total     = tasks.length;
+  const completed = tasks.filter(t =>  t.completed).length;
+  const active    = tasks.filter(t => !t.completed).length;
+  const percent   = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-  const filteredTasks = tasks.filter(t => {
-    if (activeFilter === 'Active') return !t.completed;
-    if (activeFilter === 'Completed') return t.completed;
+  const filtered = tasks.filter(t => {
+    if (activeFilter === 'Active')    return !t.completed;
+    if (activeFilter === 'Completed') return  t.completed;
     return true;
   });
 
-  return (
-    <div className="flex min-h-screen">
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
 
-      {/* ——— Sidebar ——— */}
-      <aside className="sidebar">
+  return (
+    <div className="flex min-h-screen bg-[#F5F6FA] font-sans">
+
+      {/* ════════════════════════════ SIDEBAR ════════════════════════════ */}
+      <aside className="fixed left-0 top-0 h-screen w-60 bg-[#1B1F2E] flex flex-col z-30"
+             style={{ boxShadow: '4px 0 24px rgba(0,0,0,0.15)' }}>
+
         {/* Brand */}
-        <div className="px-5 pt-7 pb-6 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/40">
-              <ClipboardList size={20} className="text-white" />
-            </div>
-            <div>
-              <p className="text-white font-bold text-base leading-tight">TaskFlow</p>
-              <p className="text-slate-500 text-xs">Professional</p>
-            </div>
+        <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06]">
+          <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/40">
+            <ClipboardList size={17} className="text-white" />
+          </div>
+          <div>
+            <p className="text-white text-sm font-bold leading-none">TaskFlow</p>
+            <p className="text-slate-500 text-[10px] mt-0.5 font-medium tracking-wide uppercase">Workspace</p>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-5 space-y-1">
-          <p className="text-xs text-slate-600 font-semibold uppercase tracking-widest px-3 mb-3">Menu</p>
-          <div className="sidebar-nav-item active">
-            <LayoutDashboard size={18} />
-            Dashboard
-          </div>
-          <div className="sidebar-nav-item">
-            <Inbox size={18} />
-            Inbox
-          </div>
-          <div className="sidebar-nav-item">
-            <ListTodo size={18} />
-            My Tasks
-          </div>
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-0.5">
+          <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Main</p>
 
-          <p className="text-xs text-slate-600 font-semibold uppercase tracking-widest px-3 pt-6 mb-3">Overview</p>
-          {/* Mini Stats in Nav */}
-          <div className="mx-1 bg-white/5 rounded-xl p-3 space-y-3">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400 flex items-center gap-1.5"><CheckCheck size={13} className="text-green-400" /> Completed</span>
-              <span className="text-white font-semibold">{completed}</span>
+          {[
+            { icon: LayoutDashboard, label: 'Dashboard', active: true },
+            { icon: Inbox,           label: 'Inbox'     },
+            { icon: ListTodo,        label: 'My Tasks'  },
+          ].map(({ icon: Icon, label, active: isActive }) => (
+            <button key={label}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          ${isActive
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                            : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                          }`}>
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+
+          {/* Divider */}
+          <div className="pt-5 pb-2">
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Overview</p>
+
+            {/* Mini stats block */}
+            <div className="mx-1 bg-white/[0.04] border border-white/[0.06] rounded-2xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <CheckCheck size={12} className="text-emerald-400" /> Completed
+                </span>
+                <span className="text-xs font-bold text-emerald-400">{completed}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <Clock size={12} className="text-indigo-400" /> Active
+                </span>
+                <span className="text-xs font-bold text-indigo-400">{active}</span>
+              </div>
+              {/* Progress bar */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-[10px] text-slate-500">Progress</span>
+                  <span className="text-[10px] font-bold text-slate-400">{percent}%</span>
+                </div>
+                <div className="h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-700"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400 flex items-center gap-1.5"><Clock size={13} className="text-indigo-400" /> Active</span>
-              <span className="text-white font-semibold">{active}</span>
-            </div>
-            <div className="w-full bg-white/10 rounded-full h-1.5 mt-1">
-              <div
-                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full transition-all duration-700"
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-            <p className="text-xs text-slate-500 text-right">{percent}% done</p>
           </div>
         </nav>
 
         {/* Bottom */}
-        <div className="px-3 py-4 border-t border-white/5 space-y-1">
-          <div className="sidebar-nav-item">
-            <Settings size={18} />
-            Settings
-          </div>
-          <div className="sidebar-nav-item">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center">
-              <User size={13} className="text-white" />
+        <div className="px-3 py-4 border-t border-white/[0.06] space-y-0.5">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all duration-150">
+            <Settings size={16} /> Settings
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all duration-150">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <User size={11} className="text-white" />
             </div>
             My Account
-          </div>
+          </button>
         </div>
       </aside>
 
-      {/* ——— Main Content ——— */}
-      <main className="main-content flex flex-col">
-        
-        {/* Top bar */}
-        <div className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+      {/* ════════════════════════════ MAIN ════════════════════════════ */}
+      <div className="ml-60 flex-1 flex flex-col">
+
+        {/* ─── Top Bar ─── */}
+        <header className="sticky top-0 z-20 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8"
+                style={{ boxShadow: '0 1px 0 #e2e8f0' }}>
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Dashboard</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+            <h1 className="text-base font-bold text-slate-800 leading-none">Dashboard</h1>
+            <p className="text-xs text-slate-400 mt-1">{today}</p>
           </div>
+
           <div className="flex items-center gap-3">
             {error && (
-              <span className="flex items-center gap-1.5 text-xs text-red-500 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full">
-                <AlertCircle size={13} /> {error}
-              </span>
+              <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl animate-fade-in">
+                <AlertCircle size={13} className="flex-shrink-0" />
+                {error}
+              </div>
             )}
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-md">
-              <User size={15} className="text-white" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-200">
+              <User size={14} className="text-white" />
             </div>
           </div>
-        </div>
+        </header>
 
-        <div className="flex-1 p-8 space-y-6">
+        {/* ─── Page Body ─── */}
+        <main className="flex-1 p-8 space-y-6 overflow-y-auto">
 
-          {/* Stat Cards */}
-          <div className="grid grid-cols-3 gap-5">
-            <div className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Total Tasks</p>
-                  <p className="text-3xl font-bold text-slate-800">{total}</p>
-                </div>
-                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-                  <ListTodo size={20} className="text-slate-500" />
+          {/* ── Stat Cards ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+
+            {/* Total */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5"
+                 style={{ boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+              <div className="flex items-start justify-between mb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Total Tasks</p>
+                <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center">
+                  <ListTodo size={18} className="text-slate-500" />
                 </div>
               </div>
-              <div className="mt-4 text-xs text-slate-400">Across all lists</div>
+              <p className="text-4xl font-extrabold text-slate-800">{total}</p>
+              <p className="text-xs text-slate-400 mt-2">All tasks combined</p>
             </div>
 
-            <div className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Completed</p>
-                  <p className="text-3xl font-bold text-green-600">{completed}</p>
-                </div>
-                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-                  <CheckCheck size={20} className="text-green-500" />
+            {/* Completed */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5"
+                 style={{ boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+              <div className="flex items-start justify-between mb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Completed</p>
+                <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center">
+                  <CheckCheck size={18} className="text-emerald-500" />
                 </div>
               </div>
-              <div className="mt-4 text-xs text-green-500 font-medium">{percent}% completion rate</div>
+              <p className="text-4xl font-extrabold text-emerald-600">{completed}</p>
+              <p className="text-xs text-emerald-500 font-medium mt-2">{percent}% completion rate</p>
             </div>
 
-            <div className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Remaining</p>
-                  <p className="text-3xl font-bold text-indigo-600">{active}</p>
-                </div>
-                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-                  <Clock size={20} className="text-indigo-500" />
+            {/* Remaining */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5"
+                 style={{ boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+              <div className="flex items-start justify-between mb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Remaining</p>
+                <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center">
+                  <Clock size={18} className="text-indigo-500" />
                 </div>
               </div>
-              <div className="mt-4 w-full bg-slate-100 rounded-full h-1.5">
+              <p className="text-4xl font-extrabold text-indigo-600">{active}</p>
+              <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="bg-indigo-500 h-1.5 rounded-full transition-all duration-700"
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-700"
                   style={{ width: `${percent}%` }}
                 />
               </div>
             </div>
           </div>
 
-          {/* Task Board */}
-          <div className="card">
+          {/* ── Task Board ── */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+               style={{ boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+
+            {/* Board Header */}
             <div className="px-6 pt-5 pb-4 border-b border-slate-100">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-slate-800">All Tasks</h2>
-                <span className="badge badge-indigo">{filteredTasks.length} tasks</span>
+                <h2 className="text-sm font-bold text-slate-800">Task List</h2>
+                <span className="text-xs font-semibold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">
+                  {filtered.length} task{filtered.length !== 1 ? 's' : ''}
+                </span>
               </div>
-              <TaskForm onAdd={handleAddTask} />
+              <TaskForm onAdd={handleAdd} />
             </div>
 
             {/* Filter Tabs */}
-            <div className="px-6 pt-4 flex items-center gap-1 border-b border-slate-100 pb-0">
-              {FILTERS.map(f => (
-                <button
-                  key={f}
-                  id={`filter-${f.toLowerCase()}`}
-                  onClick={() => setActiveFilter(f)}
-                  className={`text-sm font-medium px-4 py-2.5 border-b-2 transition-all duration-200 ${
-                    activeFilter === f
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  {f}
-                  {f === 'Active' && active > 0 && (
-                    <span className="ml-2 text-xs bg-indigo-50 text-indigo-600 font-semibold px-1.5 py-0.5 rounded-full">{active}</span>
-                  )}
-                  {f === 'Completed' && completed > 0 && (
-                    <span className="ml-2 text-xs bg-green-50 text-green-600 font-semibold px-1.5 py-0.5 rounded-full">{completed}</span>
-                  )}
-                </button>
-              ))}
+            <div className="flex items-center gap-0 px-6 border-b border-slate-100">
+              {FILTERS.map(f => {
+                const count = f === 'Active' ? active : f === 'Completed' ? completed : total;
+                return (
+                  <button
+                    key={f}
+                    id={`filter-${f.toLowerCase()}`}
+                    onClick={() => setActiveFilter(f)}
+                    className={`relative px-4 py-3 text-sm font-medium transition-all duration-150
+                                ${activeFilter === f
+                                  ? 'text-indigo-600'
+                                  : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                  >
+                    {f}
+                    {count > 0 && (
+                      <span className={`ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                                        ${activeFilter === f
+                                          ? 'bg-indigo-100 text-indigo-600'
+                                          : 'bg-slate-100 text-slate-500'
+                                        }`}>
+                        {count}
+                      </span>
+                    )}
+                    {activeFilter === f && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Task List */}
+            {/* Task List Body */}
             <div className="p-6">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                  <Loader2 size={32} className="animate-spin mb-3 text-indigo-400" />
-                  <p className="text-sm font-medium">Loading your tasks...</p>
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <Loader2 size={30} className="animate-spin text-indigo-400 mb-3" />
+                  <p className="text-sm font-medium">Loading tasks…</p>
                 </div>
-              ) : filteredTasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                  <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                    <CheckCheck size={28} className="text-slate-300" />
+              ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                    <Sparkles size={24} className="text-slate-300" />
                   </div>
                   <p className="text-sm font-semibold text-slate-600 mb-1">
                     {activeFilter === 'Completed' ? 'No completed tasks yet' : 'No tasks here'}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {activeFilter === 'All' ? 'Add your first task using the form above.' : `Switch to "All" to see all tasks.`}
+                    {activeFilter === 'All'
+                      ? 'Add a task above to get started.'
+                      : `Switch tabs to see other tasks.`}
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2.5">
-                  {filteredTasks.map((task) => (
+                <div className="space-y-2">
+                  {filtered.map(task => (
                     <TaskItem
                       key={task._id}
                       task={task}
-                      onToggle={handleToggleTask}
-                      onDelete={handleDeleteTask}
-                      onEdit={handleEditTask}
+                      onToggle={handleToggle}
+                      onDelete={handleDelete}
+                      onEdit={handleEdit}
                     />
                   ))}
                 </div>
               )}
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
-
-export default App;
